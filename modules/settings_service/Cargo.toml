@@ -1,0 +1,64 @@
+[package]
+name = "settings_service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Settings Service - CTI-based configuration management"
+
+[lints]
+workspace = true
+
+[dependencies]
+# ModKit framework
+modkit = { path = "../../libs/modkit" }
+modkit-macros = { path = "../../libs/modkit-macros" }
+modkit-db = { path = "../../libs/modkit-db" }
+modkit-db-macros = { path = "../../libs/modkit-db-macros" }
+modkit-errors = { path = "../../libs/modkit-errors" }
+modkit-odata = { path = "../../libs/modkit-odata" }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+tower = { workspace = true }
+uuid = { workspace = true }
+
+# OpenAPI documentation
+utoipa = { workspace = true }
+
+# Database
+sea-orm = { workspace = true, features = ["sqlx-postgres", "sqlx-sqlite", "with-json"] }
+sea-orm-migration = { workspace = true }
+
+# Time handling
+chrono = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Synchronous locks
+parking_lot = { workspace = true }
+
+# JSON Schema validation
+jsonschema = "0.26"
+
+# Module registration
+inventory = { workspace = true }
+tokio-util = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

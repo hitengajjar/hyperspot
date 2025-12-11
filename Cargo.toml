@@ -26,6 +26,7 @@ members = [
     "modules/grpc_hub",
     "modules/file_parser",
     "modules/nodes_registry",
+    "modules/settings_service",
     "examples/modkit/users_info"
 ]
 resolver = "2"
