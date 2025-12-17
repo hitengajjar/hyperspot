@@ -1,6 +1,6 @@
 //! Domain service - business logic orchestration
 
-use crate::contract::{GtsType, Setting, SettingsError};
+use crate::contract::{AuthContext, GtsType, Setting, SettingsError};
 use super::events::{EventPublisher, SettingEvent};
 use super::repository::{GtsTypeRepository, SettingsRepository};
 use parking_lot::RwLock;
@@ -72,13 +72,33 @@ impl Service {
             })
     }
 
-    /// Update or create a setting
+    /// Update or create a setting (backward compatible - non-admin context)
     pub async fn upsert_setting(
         &self,
         setting_type: &str,
         tenant_id: Uuid,
         domain_object_id: &str,
         data: serde_json::Value,
+    ) -> Result<Setting, SettingsError> {
+        // Call the auth-aware version with default non-admin context
+        self.upsert_setting_with_auth(
+            setting_type,
+            tenant_id,
+            domain_object_id,
+            data,
+            &AuthContext::non_admin(),
+        )
+        .await
+    }
+
+    /// Update or create a setting with authentication context (root/admin override support)
+    pub async fn upsert_setting_with_auth(
+        &self,
+        setting_type: &str,
+        tenant_id: Uuid,
+        domain_object_id: &str,
+        data: serde_json::Value,
+        auth_context: &AuthContext,
     ) -> Result<Setting, SettingsError> {
         // Validate GTS type exists and get traits
         let gts_type = self.get_gts_type(setting_type).await?;
@@ -88,7 +108,48 @@ impl Service {
             crate::domain::validation::validate_against_schema(&data, schema)?;
         }
 
-        // TODO: Check if setting is locked (compliance mode)
+        // Check if setting is locked (compliance mode)
+        // Root/admin can modify locked settings
+        let lock_key = (setting_type.to_string(), tenant_id, domain_object_id.to_string());
+        if !auth_context.is_root_admin {
+            if let Some(&read_only) = self.locks.read().get(&lock_key) {
+                if read_only {
+                    return Err(SettingsError::Conflict {
+                        reason: format!(
+                            "Setting is locked for compliance: {}/{}/{}",
+                            setting_type, tenant_id, domain_object_id
+                        ),
+                    });
+                }
+            }
+        }
+
+        // Check is_value_overwritable constraint
+        // Root/admin can bypass this constraint
+        if !auth_context.is_root_admin && !gts_type.traits.options.is_value_overwritable {
+            // Check if a parent setting exists (simplified check - in production, would traverse hierarchy)
+            // For now, we'll just check if any setting with this type exists for a different tenant
+            // This is a placeholder for proper hierarchy traversal
+            let existing_settings = self
+                .settings_repo
+                .find_by_type(setting_type, None)
+                .await
+                .map_err(|_| SettingsError::Internal)?;
+
+            // If there are existing settings for other tenants, this might be an override attempt
+            let has_parent_setting = existing_settings
+                .iter()
+                .any(|s| s.tenant_id != tenant_id && s.domain_object_id == domain_object_id);
+
+            if has_parent_setting {
+                return Err(SettingsError::Conflict {
+                    reason: format!(
+                        "Setting is not overwritable (is_value_overwritable=false): {}/{}/{}",
+                        setting_type, tenant_id, domain_object_id
+                    ),
+                });
+            }
+        }
 
         let setting = Setting {
             r#type: setting_type.to_string(),
@@ -115,7 +176,26 @@ impl Service {
 
         // Publish events based on GTS traits
         if let Ok(Some(gts_type)) = self.gts_type_repo.find_by_type(setting_type).await {
+            // TODO: Convert string user_id/client_id to UUID for event publishing
+            // For now, pass None - will be enhanced in Phase 3 with proper user context
             let event = SettingEvent::upserted(&result, is_new, None);
+
+            // Log root/admin override for audit trail
+            if auth_context.is_root_admin {
+                let user_context = auth_context.user_id.clone()
+                    .or_else(|| auth_context.client_id.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                
+                eprintln!(
+                    "🔐 ROOT/ADMIN OVERRIDE: User/Client {} modified setting {}/{}/{} (is_value_overwritable={}, locked={})",
+                    user_context,
+                    setting_type,
+                    tenant_id,
+                    domain_object_id,
+                    gts_type.traits.options.is_value_overwritable,
+                    self.is_locked(setting_type, tenant_id, domain_object_id)
+                );
+            }
 
             // Publish audit event if configured
             if let Err(e) = self

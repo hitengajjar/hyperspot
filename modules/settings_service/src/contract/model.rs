@@ -124,3 +124,40 @@ impl Default for EventConfig {
         }
     }
 }
+
+/// Authentication context for privilege-aware operations
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthContext {
+    /// Whether the user has root/admin privileges
+    pub is_root_admin: bool,
+    /// Optional user identifier for audit logging
+    pub user_id: Option<String>,
+    /// Optional client identifier for audit logging
+    pub client_id: Option<String>,
+}
+
+impl Default for AuthContext {
+    fn default() -> Self {
+        Self {
+            is_root_admin: false,
+            user_id: None,
+            client_id: None,
+        }
+    }
+}
+
+impl AuthContext {
+    /// Create a new non-admin context
+    pub fn non_admin() -> Self {
+        Self::default()
+    }
+
+    /// Create a new root/admin context
+    pub fn root_admin(user_id: Option<String>, client_id: Option<String>) -> Self {
+        Self {
+            is_root_admin: true,
+            user_id,
+            client_id,
+        }
+    }
+}

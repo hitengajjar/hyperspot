@@ -10,5 +10,5 @@ pub mod model;
 pub use client::SettingsApi;
 pub use error::SettingsError;
 pub use model::{
-    GtsTraits, GtsType, DomainType, EventConfig, EventTarget, Setting, SettingOptions,
+    AuthContext, DomainType, EventConfig, EventTarget, GtsTraits, GtsType, Setting, SettingOptions,
 };
