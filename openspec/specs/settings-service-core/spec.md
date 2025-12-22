@@ -3,6 +3,8 @@
 ## Purpose
 Provide a GTS-based settings management system per the GTS specification. Settings are identified by Global Type System identifiers (GTS) with configuration defined as GTS traits. Supports runtime registration of GTS types and dynamic trait-based configuration.
 
+Maintain comprehensive technical documentation for the Rust Settings Service implementation, covering API contracts, authentication flows, feature scope, configuration patterns, and known limitations to enable efficient development and maintenance.
+
 **Note**: This spec defines the GTS-based settings service implementation as a HyperSpot module using ModKit framework.
 
 ## Module Architecture
@@ -602,3 +604,19 @@ The system SHALL validate GTS format according to specification.
 - **AND** the system SHALL validate namespace structure
 - **AND** the system SHALL validate component identifiers
 - **AND** invalid formats SHALL be rejected with detailed error messages
+
+### Requirement: Rust Service Documentation Package
+The system SHALL maintain a `docs/` directory that explains API surface, authentication flow, feature scope, configuration examples, and known limitations for the Rust service implementation.
+
+#### Scenario: Engineer reviews API spec
+- **WHEN** a developer opens `docs/api-spec.md`
+- **THEN** they SHALL see the v2 HTTP routes and reporting endpoints referenced to current implementation files.
+
+#### Scenario: Engineer studies auth model
+- **WHEN** a developer opens `docs/auth-mechanism.md`
+- **THEN** they SHALL find the end-to-end authentication and authorization flow, including context headers and scope resolution rules.
+
+#### Scenario: Engineer evaluates implementation details
+- **WHEN** a developer opens `docs/known-limitations.md`
+- **THEN** they SHALL see the documented constraints and limitations with source references.
+
